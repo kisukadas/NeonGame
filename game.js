@@ -11,14 +11,19 @@ const restartBtn = document.getElementById('restart-btn');
 
 // Game State
 let animationId;
+let lastTime = 0;
 let score = 0;
 let multiplier = 1;
-let speed = 5;
+let speed = 300; // Pixels per second
 let isActive = false;
 let isDead = false;
-let frames = 0;
 let highScore = localStorage.getItem('neonAscentHighScore') || 0;
 let obstaclesCleared = 0;
+
+// Timers
+let obstacleTimer = 0;
+let collectableTimer = 0;
+let gridLineTimer = 0;
 
 // Grid & Visuals
 let gridHue = 180; // Cyan default (HSL)
@@ -52,8 +57,10 @@ class Player {
         this.height = 30;
         this.x = canvas.width / 2 - this.width / 2;
         this.y = canvas.height - 100;
+        this.y = canvas.height - 100;
         this.color = '#0ff';
         this.trail = [];
+        this.trailTimer = 0;
         this.velocity = { x: 0, y: 0 };
         this.visible = true;
     }
@@ -86,20 +93,22 @@ class Player {
         ctx.shadowBlur = 0;
     }
 
-    update() {
+    update(dt) {
         if (!this.visible) return;
 
-        if (keys.ArrowLeft) this.velocity.x = -7;
-        else if (keys.ArrowRight) this.velocity.x = 7;
+        if (keys.ArrowLeft) this.velocity.x = -420;
+        else if (keys.ArrowRight) this.velocity.x = 420;
         else this.velocity.x = 0;
 
-        this.x += this.velocity.x;
+        this.x += this.velocity.x * dt;
 
         if (this.x < 0) this.x = 0;
         if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
 
-        if (frames % 2 === 0) {
+        this.trailTimer += dt;
+        if (this.trailTimer > 0.03) { // ~30fps trail
             this.trail.push({ x: this.x, y: this.y });
+            this.trailTimer = 0;
             if (this.trail.length > 10) this.trail.shift();
         }
     }
@@ -133,11 +142,13 @@ class Collectable {
         ctx.shadowBlur = 0;
     }
 
-    update() {
-        this.y += speed;
+    update(dt) {
+        this.y += speed * dt;
         // Gentle sway
-        this.x += Math.sin(this.wobbleAngle) * 0.5;
-        this.wobbleAngle += 0.05;
+        this.x += Math.sin(this.wobbleAngle) * 0.5; // Keep small sway in px? No multiply by dt? Wait, sin is mostly position.
+        // Actually to make sway speed consistent, wobbleAngle must increment by dt.
+        // And the offset should be consistent. Offset is just position.
+        this.wobbleAngle += 3 * dt;
 
         if (this.y > canvas.height + this.radius) {
             this.markedForDeletion = true;
@@ -151,14 +162,14 @@ class FloatingText {
         this.x = x;
         this.y = y;
         this.alpha = 1;
-        this.velocity = -2;
+        this.velocity = -120;
         this.color = color;
         this.markedForDeletion = false;
     }
 
-    update() {
-        this.y += this.velocity;
-        this.alpha -= 0.02;
+    update(dt) {
+        this.y += this.velocity * dt;
+        this.alpha -= 1.2 * dt;
         if (this.alpha <= 0) this.markedForDeletion = true;
     }
 
@@ -193,12 +204,15 @@ class Obstacle {
         ctx.shadowBlur = 0;
     }
 
-    update() {
-        this.y += speed;
+    update(dt) {
+        this.y += speed * dt;
 
         if (this.y > canvas.height) {
             this.markedForDeletion = true;
-            if (!isDead) {
+            if (!isDead) { // Check dead state
+                // Score logic moved or kept here?
+                // If I keep it here, it effectively runs once when it passes bottom.
+                // This is safe.
                 score += 10 * multiplier;
                 scoreEl.innerText = score;
                 handleObstacleCleared();
@@ -214,11 +228,11 @@ class Particle {
         this.radius = Math.random() * 3 + 1;
         this.color = color;
         this.velocity = {
-            x: (Math.random() - 0.5) * 15,
-            y: (Math.random() - 0.5) * 15
+            x: (Math.random() - 0.5) * 900,
+            y: (Math.random() - 0.5) * 900
         };
         this.alpha = 1;
-        this.decay = Math.random() * 0.02 + 0.01;
+        this.decay = Math.random() * 1.2 + 0.6;
     }
 
     draw() {
@@ -231,10 +245,10 @@ class Particle {
         ctx.restore();
     }
 
-    update() {
-        this.x += this.velocity.x;
-        this.y += this.velocity.y;
-        this.alpha -= this.decay;
+    update(dt) {
+        this.x += this.velocity.x * dt;
+        this.y += this.velocity.y * dt;
+        this.alpha -= this.decay * dt;
     }
 }
 
@@ -253,8 +267,8 @@ class GridLine {
         ctx.stroke();
     }
 
-    update() {
-        this.y += speed;
+    update(dt) {
+        this.y += speed * dt;
     }
 }
 
@@ -309,9 +323,13 @@ function init() {
     floatingTexts = [];
     gridLines = [];
     score = 0;
-    speed = 5;
+    speed = 300;
     multiplier = 1;
-    frames = 0;
+    // frames = 0; // Removed
+    obstacleTimer = 0;
+    collectableTimer = 0;
+    gridLineTimer = 0;
+
     obstaclesCleared = 0;
     isRainbowMode = false;
     gridHue = LEVEL_COLORS[0];
@@ -328,14 +346,15 @@ function init() {
     audioManager.startMusic();
     audioManager.bpm = 140;
 
-    animate();
+    lastTime = 0;
+    requestAnimationFrame(animate);
 }
 
 function handleObstacleCleared() {
     obstaclesCleared++;
 
-    if (speed < 25) {
-        speed += 0.05;
+    if (speed < 1500) {
+        speed += 3;
         if (obstaclesCleared % 5 === 0) audioManager.increaseTempo();
     }
 
@@ -359,26 +378,29 @@ function updateGridColor() {
     gridColorStr = `hsla(${gridHue}, 100%, 50%, 0.2)`;
 }
 
-function spawnObstacles() {
-    let spawnRate = Math.floor(300 / speed);
-    if (spawnRate < 15) spawnRate = 15;
-
-    if (frames % spawnRate === 0) {
+function spawnObstacles(dt) {
+    const timeToSpawn = 300 / speed; // Distance (300px) / Speed (px/s) = Time (s)
+    obstacleTimer += dt;
+    if (obstacleTimer > timeToSpawn) {
         obstacles.push(new Obstacle());
+        obstacleTimer = 0;
     }
 }
 
-function spawnCollectables() {
-    // Spawn less frequently than obstacles
-    if (frames % 200 === 0) {
+function spawnCollectables(dt) {
+    collectableTimer += dt;
+    if (collectableTimer > 3) { // Approx 3 seconds
         collectables.push(new Collectable());
+        collectableTimer = 0;
     }
 }
 
-function spawnGridLines() {
-    const lineGapFrames = Math.floor(100 / speed);
-    if (frames % lineGapFrames === 0) {
+function spawnGridLines(dt) {
+    const timeToSpawn = 100 / speed;
+    gridLineTimer += dt;
+    if (gridLineTimer > timeToSpawn) {
         gridLines.push(new GridLine());
+        gridLineTimer = 0;
     }
 }
 
@@ -454,14 +476,21 @@ function showGameOver() {
     gameOverScreen.classList.remove('hidden');
 }
 
-function animate() {
+function animate(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const deltaTime = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    // Cap delta time to prevent huge jumps (e.g. if tab was inactive)
+    const dt = Math.min(deltaTime, 0.1);
+
     // Clear
     ctx.fillStyle = 'rgba(5, 5, 16, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Update visuals
     if (isRainbowMode) {
-        gridHue = (gridHue + 2) % 360;
+        gridHue = (gridHue + 120 * dt) % 360; // 120 degrees per second
         updateGridColor();
     }
 
@@ -479,50 +508,50 @@ function animate() {
     ctx.stroke();
 
     gridLines.forEach((line, index) => {
-        if (!isDead) line.update();
+        if (!isDead) line.update(dt);
         line.draw();
         if (line.y > canvas.height) gridLines.splice(index, 1);
     });
-    if (!isDead) spawnGridLines();
+    if (!isDead) spawnGridLines(dt);
 
     // Collectables (Behind player? Or same layer. Let's do before player)
     collectables.forEach((c, index) => {
-        if (!isDead) c.update();
+        if (!isDead) c.update(dt);
         c.draw();
         if (c.markedForDeletion) collectables.splice(index, 1);
     });
 
     // Player
-    player.update();
+    player.update(dt);
     player.draw();
 
     // Obstacles
     obstacles = obstacles.filter(obstacle => !obstacle.markedForDeletion);
     obstacles.forEach(obstacle => {
-        if (!isDead) obstacle.update();
+        if (!isDead) obstacle.update(dt);
         obstacle.draw();
     });
 
     // Particles
     particles = particles.filter(particle => particle.alpha > 0);
     particles.forEach(particle => {
-        particle.update();
+        particle.update(dt);
         particle.draw();
     });
 
     // Floating Text
     floatingTexts = floatingTexts.filter(t => !t.markedForDeletion);
     floatingTexts.forEach(t => {
-        t.update();
+        t.update(dt);
         t.draw();
     });
 
     if (isActive) {
         if (!isDead) { // Alive logic
-            spawnObstacles();
-            spawnCollectables();
+            spawnObstacles(dt);
+            spawnCollectables(dt);
             checkCollisions();
-            frames++;
+            // frames++; // Removed
         }
         animationId = requestAnimationFrame(animate);
     }
