@@ -1,0 +1,171 @@
+:root {
+    --neon-cyan: #0ff;
+    --neon-magenta: #f0f;
+    --neon-yellow: #ff0;
+    --bg-color: #050510;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 600px; /* Mobile friendly but constrained on desktop */
+    aspect-ratio: 9/16;
+    background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+    box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
+    border: 1px solid #333;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* UI Overlay */
+#ui-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px var(--neon-cyan);
+}
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+    transition: opacity 0.3s ease;
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--neon-magenta);
+    text-shadow: 
+        0 0 5px var(--neon-magenta),
+        0 0 10px var(--neon-magenta),
+        0 0 20px var(--neon-magenta);
+    text-align: center;
+    line-height: 1.1;
+}
+
+/* Glitch Effect */
+.glitch {
+    position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch::before {
+    left: 2px;
+    text-shadow: -1px 0 var(--neon-cyan);
+    clip: rect(24px, 550px, 90px, 0);
+    animation: glitch-anim-2 3s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+    left: -2px;
+    text-shadow: -1px 0 var(--neon-yellow);
+    clip: rect(85px, 550px, 140px, 0);
+    animation: glitch-anim 2.5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+    0% { clip: rect(13px, 9999px, 88px, 0); }
+    20% { clip: rect(109px, 9999px, 2px, 0); }
+    40% { clip: rect(4px, 9999px, 137px, 0); }
+    60% { clip: rect(57px, 9999px, 58px, 0); }
+    80% { clip: rect(130px, 9999px, 35px, 0); }
+    100% { clip: rect(29px, 9999px, 102px, 0); }
+}
+
+@keyframes glitch-anim-2 {
+    0% { clip: rect(129px, 9999px, 36px, 0); }
+    20% { clip: rect(32px, 9999px, 4px, 0); }
+    40% { clip: rect(98px, 9999px, 130px, 0); }
+    60% { clip: rect(11px, 9999px, 49px, 0); }
+    80% { clip: rect(78px, 9999px, 100px, 0); }
+    100% { clip: rect(144px, 9999px, 73px, 0); }
+}
+
+p {
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 2rem;
+    letter-spacing: 2px;
+}
+
+button {
+    background: transparent;
+    border: 2px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    padding: 15px 40px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+button:hover {
+    background: var(--neon-cyan);
+    color: #000;
+    box-shadow: 0 0 30px var(--neon-cyan);
+}
+
+/* Mobile responsive full screen */
+@media (max-width: 600px) {
+    #game-container {
+        max-width: 100%;
+        height: 100%;
+        border: none;
+    }
+}

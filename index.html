@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON ASCENT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-overlay">
+            <div id="score-container">SCORE: <span id="score">0</span></div>
+            <div id="multiplier-container">MULTIPLIER: x<span id="multiplier">1</span></div>
+        </div>
+
+        <div id="start-screen" class="screen">
+            <h1 class="glitch" data-text="NEON ASCENT">NEON ASCENT</h1>
+            <p>AVOID THE OBSTACLES</p>
+            <button id="start-btn">INITIATE RUN</button>
+        </div>
+
+        <div id="game-over-screen" class="screen hidden">
+            <h1>SYSTEM CRITICAL</h1>
+            <p>FINAL SCORE: <span id="final-score">0</span></p>
+            <p style="font-size: 0.9rem; margin-top: -1.5rem; color: #ff0;">HIGH SCORE: <span id="high-score">0</span>
+            </p>
+            <button id="restart-btn">REBOOT SYSTEM</button>
+        </div>
+    </div>
+    <script src="audio.js"></script>
+    <script src="game.js"></script>
+</body>
+
+</html>
